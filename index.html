@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ikaw Tally an ko</title>
+    <title>Weekly Tally Tracker</title>
     <style>
         * {
             box-sizing: border-box;
@@ -20,7 +20,6 @@
             color: #ffffff;
         }
 
-        /* Header / Reset Banner */
         header {
             background-color: rgba(17, 19, 24, 0.9);
             padding: 1rem 2rem;
@@ -52,14 +51,12 @@
             border-color: #6b7280;
         }
 
-        /* Split Screen Container */
         .split-container {
             display: flex;
             flex: 1;
             width: 100%;
         }
 
-        /* Individual Sides (Background Image Slots) */
         .side {
             flex: 1;
             position: relative;
@@ -79,17 +76,16 @@
            Replace the URLs inside url('...') with your image paths
            ========================================================= */
         .left-side {
-            background-color: #1a1f2c; /* Fallback color */
-            background-image: url("45f4a8c4-7705-452b-8a26-82a4a71770fc.jpg");
+            background-color: #1a1f2c;
+            background-image: url('YOUR_LEFT_IMAGE_URL_HERE.jpg');
             border-right: 2px solid #2a2f3d;
         }
 
         .right-side {
-            background-color: #1f1a24; /* Fallback color */
-            background-image: url("98a416a8-ad56-486c-87a5-68df2de8ae93.jpg");
+            background-color: #1f1a24;
+            background-image: url('YOUR_RIGHT_IMAGE_URL_HERE.jpg');
         }
 
-        /* Dark semi-transparent overlay so tally lines stay readable over photos */
         .side::before {
             content: "";
             position: absolute;
@@ -98,7 +94,6 @@
             z-index: 1;
         }
 
-        /* Content wrapper sitting above the background image & overlay */
         .side-content {
             position: relative;
             z-index: 2;
@@ -123,7 +118,6 @@
             color: #f3f4f6;
         }
 
-        /* Large Tally Lines Container */
         .tally-box {
             display: flex;
             justify-content: center;
@@ -152,14 +146,12 @@
             box-shadow: 0 0 20px rgba(251, 113, 133, 0.45);
         }
 
-        /* State when a tally line is removed */
         .tally-line.spent {
             opacity: 0.12;
             transform: scaleY(0.75);
             box-shadow: none;
         }
 
-        /* -1 Button */
         .decrement-btn {
             font-size: 1.5rem;
             font-weight: 800;
@@ -200,7 +192,6 @@
             box-shadow: none;
         }
 
-        /* Responsive Stack for Mobile */
         @media (max-width: 768px) {
             .split-container {
                 flex-direction: column;
@@ -222,46 +213,65 @@
 <body>
 
     <header>
-        <div class="week-info" id="reset-status">Resets every Monday at 00:00</div>
-        <button class="manual-reset-btn" onclick="forceReset()">Reset Now</button>
+        <div class="week-info" id="reset-status">Connecting to Firebase...</div>
+        <button class="manual-reset-btn" id="reset-btn">Reset Now</button>
     </header>
 
     <main class="split-container">
-        <!-- LEFT SIDE -->
         <section class="side left-side">
             <div class="side-content">
-                <h2 class="side-title">Esson</h2>
+                <h2 class="side-title">Side 1</h2>
                 <div class="tally-box" id="left-tallies">
                     <div class="tally-line"></div>
                     <div class="tally-line"></div>
                     <div class="tally-line"></div>
                 </div>
-                <button class="decrement-btn" id="left-btn" onclick="decrement('left')">-1</button>
+                <button class="decrement-btn" id="left-btn">-1</button>
             </div>
         </section>
 
-        <!-- RIGHT SIDE -->
         <section class="side right-side">
             <div class="side-content">
-                <h2 class="side-title">Je</h2>
+                <h2 class="side-title">Side 2</h2>
                 <div class="tally-box" id="right-tallies">
                     <div class="tally-line"></div>
                     <div class="tally-line"></div>
                     <div class="tally-line"></div>
                 </div>
-                <button class="decrement-btn" id="right-btn" onclick="decrement('right')">-1</button>
+                <button class="decrement-btn" id="right-btn">-1</button>
             </div>
         </section>
     </main>
 
-    <script>
-        const MAX_TALLIES = 3;
-        const STORAGE_KEY = 'weekly_dual_tally_state';
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
-        // Calculates the timestamp of the most recent Monday at 00:00:00 local time
+        const firebaseConfig = {
+            apiKey: "AIzaSyBj3ZV21X--6fKxWFOSMRa98-h53CGBKYI",
+            authDomain: "tally-tally-an.firebaseapp.com",
+            databaseURL: "https://tally-tally-an-default-rtdb.firebaseio.com",
+            projectId: "tally-tally-an",
+            storageBucket: "tally-tally-an.firebasestorage.app",
+            messagingSenderId: "967387456313",
+            appId: "1:967387456313:web:110e5f7aaba2a16bd03ee8",
+            measurementId: "G-Y7FKYZJJLY"
+        };
+
+        const MAX_TALLIES = 3;
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const tallyRef = ref(db, "sharedTally/current");
+
+        let currentState = {
+            weekStart: getStartOfCurrentWeek(),
+            left: MAX_TALLIES,
+            right: MAX_TALLIES
+        };
+
         function getStartOfCurrentWeek() {
             const now = new Date();
-            const day = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const day = now.getDay();
             const diffToMonday = (day === 0 ? -6 : 1 - day);
             const monday = new Date(now);
             monday.setDate(now.getDate() + diffToMonday);
@@ -269,92 +279,99 @@
             return monday.getTime();
         }
 
-        function loadState() {
-            const currentWeekStart = getStartOfCurrentWeek();
-            const savedRaw = localStorage.getItem(STORAGE_KEY);
-
-            if (savedRaw) {
-                try {
-                    const saved = JSON.parse(savedRaw);
-                    // Check if the saved week matches the current week
-                    if (saved.weekStart === currentWeekStart) {
-                        return saved;
-                    }
-                } catch (e) {
-                    console.error("Failed to parse saved state, resetting.");
-                }
-            }
-
-            // Default or newly reset weekly state
-            const freshState = {
-                weekStart: currentWeekStart,
+        function getFreshWeekState(weekStart = getStartOfCurrentWeek()) {
+            return {
+                weekStart,
                 left: MAX_TALLIES,
                 right: MAX_TALLIES
             };
-            saveState(freshState);
-            return freshState;
         }
 
-        function saveState(state) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        }
-
-        let state = loadState();
-
-        function render() {
-            ['left', 'right'].forEach(side => {
+        function render(state) {
+            ["left", "right"].forEach(side => {
                 const container = document.getElementById(`${side}-tallies`);
-                const lines = container.querySelectorAll('.tally-line');
+                const lines = container.querySelectorAll(".tally-line");
                 const btn = document.getElementById(`${side}-btn`);
-                const count = state[side];
+                const count = typeof state[side] === "number" ? state[side] : MAX_TALLIES;
 
                 lines.forEach((line, index) => {
                     if (index < count) {
-                        line.classList.remove('spent');
+                        line.classList.remove("spent");
                     } else {
-                        line.classList.add('spent');
+                        line.classList.add("spent");
                     }
                 });
 
                 btn.disabled = count <= 0;
             });
 
-            // Display next reset date
             const nextMonday = new Date(state.weekStart + 7 * 24 * 60 * 60 * 1000);
-            document.getElementById('reset-status').textContent = 
-                `Next auto-reset: ${nextMonday.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`;
+            document.getElementById("reset-status").textContent =
+                `Synced • Next auto-reset: ${nextMonday.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}`;
+        }
+
+        function writeState(nextState) {
+            currentState = nextState;
+            render(currentState);
+            set(tallyRef, nextState).catch(err => {
+                console.error("Firebase write failed:", err);
+                document.getElementById("reset-status").textContent = "Sync error — check Firebase config/rules";
+            });
         }
 
         function decrement(side) {
-            // Re-verify week boundary before modifying in case tab stayed open across Monday midnight
-            const currentWeekStart = getStartOfCurrentWeek();
-            if (state.weekStart !== currentWeekStart) {
-                state = { weekStart: currentWeekStart, left: MAX_TALLIES, right: MAX_TALLIES };
+            const thisWeek = getStartOfCurrentWeek();
+            if (currentState.weekStart !== thisWeek) {
+                const resetState = getFreshWeekState(thisWeek);
+                resetState[side] = Math.max(0, MAX_TALLIES - 1);
+                writeState(resetState);
+                return;
             }
 
-            if (state[side] > 0) {
-                state[side] -= 1;
-                saveState(state);
-                render();
+            if (currentState[side] > 0) {
+                writeState({
+                    ...currentState,
+                    [side]: currentState[side] - 1
+                });
             }
         }
 
         function forceReset() {
-            state = {
-                weekStart: getStartOfCurrentWeek(),
-                left: MAX_TALLIES,
-                right: MAX_TALLIES
-            };
-            saveState(state);
-            render();
+            writeState(getFreshWeekState(getStartOfCurrentWeek()));
         }
 
-        // Initial render and periodic check every minute for weekly rollover
-        render();
+        document.getElementById("left-btn").addEventListener("click", () => decrement("left"));
+        document.getElementById("right-btn").addEventListener("click", () => decrement("right"));
+        document.getElementById("reset-btn").addEventListener("click", forceReset);
+
+        onValue(tallyRef, (snapshot) => {
+            const thisWeek = getStartOfCurrentWeek();
+
+            if (!snapshot.exists()) {
+                writeState(getFreshWeekState(thisWeek));
+                return;
+            }
+
+            const data = snapshot.val();
+            if (data.weekStart !== thisWeek) {
+                writeState(getFreshWeekState(thisWeek));
+                return;
+            }
+
+            currentState = {
+                weekStart: data.weekStart,
+                left: typeof data.left === "number" ? data.left : MAX_TALLIES,
+                right: typeof data.right === "number" ? data.right : MAX_TALLIES
+            };
+            render(currentState);
+        }, (error) => {
+            console.error("Firebase read failed:", error);
+            document.getElementById("reset-status").textContent = "Failed to load database — check rules";
+        });
+
         setInterval(() => {
-            if (state.weekStart !== getStartOfCurrentWeek()) {
-                state = loadState();
-                render();
+            if (currentState.weekStart !== getStartOfCurrentWeek()) {
+                forceReset();
             }
         }, 60000);
     </script>
